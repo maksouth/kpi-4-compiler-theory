@@ -1,19 +1,24 @@
-package math_lexer
+package recognizer
 
+import fsm.FSM
 import fsm.State
 import java.util.regex.Pattern
 
-fun buildNumberRecognizer(): (String) -> Pair<Boolean, String> = {
-    val regex = "\\d+(\\.\\d)*"
+fun buildRegexNumberRecognizer(): (String) -> Pair<Boolean, String> = {
+    val regex = "\\d+(\\.\\d+)?([eE][+-]?\\d+)?"
     val pattern = Pattern.compile(regex)
     val matcher = pattern.matcher(it)
 
-    val isNumber = matcher.matches()
-    val end = matcher.regionEnd()
-    val number = it.substring(0, end)
+    val isNumber = matcher.find()
+    val number = matcher.group()
 
     isNumber to number
 }
+
+fun buildFSMNumberRecognizer(): (String) -> Pair<Boolean, String> = FSM (
+    initialState = InitialState,
+    acceptingStates = listOf(Integer, NumberWithFractionalPart, NumberWithExponent)
+)
 
 object InitialState: State() {
     override fun nextInternal(input: Char) =

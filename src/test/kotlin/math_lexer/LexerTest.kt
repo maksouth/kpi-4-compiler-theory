@@ -40,4 +40,14 @@ class LexerTest {
         lexer = Lexer("circle_circumference = e2 ~ pi * radius")
         println(lexer.allTokens())
     }
+
+    @Test fun `test 12 dot 34 * 5e-9 new line circle_circumference = 2 * pi * radius`() {
+        val source = """
+            12.34 * 5e-9
+            circle_circumference = 2 * pi * radius
+        """.trimIndent()
+
+        lexer = Lexer(source)
+        println(lexer.allTokens())
+    }
 }

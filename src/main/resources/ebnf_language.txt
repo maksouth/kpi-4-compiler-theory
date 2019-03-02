@@ -1,0 +1,58 @@
+program
+	: package_statement 
+	  import_statement* 
+	  top_level_declaration*
+
+package_statement = identifier ('.' identifier)*
+import_statement = 'import' identifier ('.' identifier)*
+
+top_level_declaration = (function_declaration | structure_declaration)
+
+function_declaration = 'fun' identifier parameter_list? ':' type (block | '=' expression)
+parameter_list = '(' (function_parameter (',' function_parameter))? ')' 
+function_parameter = identifier ':' type ('=' expression)?
+block = '{' expression* '}'
+
+structure_declaration = 'struct' identifier (':' inheritance_list)? (parameter_list)? 
+inheritance_list = ':' identifier (',' identifier)*
+
+identifier = letter (letter|digit|sign)* 
+
+expression = conditional_expression | literal_constant | function_call | getter | structure_constructor | list | string
+
+conditional_expression = 'if' function_call expression ('else' expression)?
+
+literal_constant = number | char | boolean
+
+string = '"' (line_string_content | line_string_expression)* '"'
+line_string_expression = '${' expression '}'  
+line_string_content = (literal_constant | sign)
+
+number = ('-')? digit+ ('.' digit+)?
+
+char = [a-zA-Z]
+digit = '0'..'9'
+sign = UNICODE_SYMBOL
+
+list = '[' expression (',' expression)* ']'
+  | '[' ']'
+
+function_call = identifier ( '(' parameter_expression* ')' )?
+structure_constructor = identifier ( '(' parameter_expression* ')' )? 
+
+parameter_expression = (identifier '=')? expression
+
+getter = identifier '[' (identifier | number) ']'
+
+type = 
+	: 'list'
+	| functional_type
+	| structure_type
+	| 'number'
+	| 'string'
+	| 'char'
+	| 'bool'
+	| 'unit'
+
+functional_type = type '->' type
+structure_type = identifier

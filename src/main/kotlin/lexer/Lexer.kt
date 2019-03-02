@@ -1,13 +1,14 @@
-package math_lexer
+package lexer
 
 import recognizer.Recognizer
+import recognizer.RegexRecognizer
 
 class Lexer(private val input: String) {
     private var currentParsePosition = 0
     private var currentParseLine = 0
     private var currentParseColumn = 0
 
-    private val recognizer: Recognizer = recognizer.RegexRecognizer
+    private val recognizer: Recognizer = RegexRecognizer
 
     fun allTokens(): List<Token> {
         var token = nextToken()
