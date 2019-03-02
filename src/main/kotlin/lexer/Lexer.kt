@@ -8,6 +8,7 @@ import kotlin.Pair
 import kotlin.String
 
 class Lexer(private val input: String) {
+
     private var currentParsePosition = 0
     private var currentParseLine = 0
     private var currentParseColumn = 0
@@ -100,7 +101,7 @@ class Lexer(private val input: String) {
         typeResolver: (String) -> TokenType,
         default: Token? = null
     ): Token? {
-        val (isKeyword, keyword) = recognizer(input)
+        val (isKeyword, keyword) = recognizer(input.substring(currentParsePosition))
 
         if (!isKeyword) return default
 

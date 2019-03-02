@@ -15,8 +15,9 @@ interface Recognizer {
 object RegexRecognizer: Recognizer {
 
     const val NUMBER_REGEX = "^-?\\d+(\\.\\d+)?"
-    const val IDENTIFIER_REGEX = "^[\\u\\l]([\\u\\l]|\\d|_)*"
-    const val STRING_REGEX = "^\"((\${[a-zA-Z0-9]+})|[\\u\\l\\d])*\""
+    const val IDENTIFIER_REGEX = "^[a-zA-Z]([a-zA-Z]|\\d|_)*"
+    // const val STRING_REGEX = "^\"((\${[a-zA-Z0-9]+})|[a-zA-Z\\d])*\"" not working
+    const val STRING_REGEX = "^\"((\$[a-zA-Z0-9 ]+)|[a-zA-Z\\d ])*\""
 
     override fun number(): (String) -> Pair<Boolean, String> = {
         recognize(NUMBER_REGEX, it)
@@ -50,7 +51,7 @@ object RegexRecognizer: Recognizer {
         val matcher = pattern.matcher(input)
 
         val isMatch = matcher.find()
-        val matchedGroup = matcher.group()
+        val matchedGroup = if (isMatch) matcher.group() else input
 
         return isMatch to matchedGroup
     }
