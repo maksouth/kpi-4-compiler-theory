@@ -3,46 +3,41 @@ program
 	  import_statement* 
 	  top_level_declaration*
 
-package_statement = identifier ('.' identifier)*
-import_statement = 'import' identifier ('.' identifier)*
+package_statement = identifier (DOT identifier)*
+import_statement = IMPORT identifier (DOT identifier)*
 
 top_level_declaration = (function_declaration | structure_declaration)
 
-function_declaration = 'fun' identifier parameter_list? ':' type (block | '=' expression)
-parameter_list = '(' (function_parameter (',' function_parameter))? ')' 
-function_parameter = identifier ':' type ('=' expression)?
-block = '{' expression* '}'
+function_declaration = FUN identifier parameter_list? SEMICOLON type (block | EQUAL expression)
+parameter_list = OPEN_ROUND_BR (function_parameter (COMMA function_parameter))? CLOSE_ROUND_BR 
+function_parameter = identifier SEMICOLON type (EQUAL expression)?
+block = OPEN_CURLY_BR expression* CLOSE_CURLY_BR
 
-structure_declaration = 'struct' identifier (':' inheritance_list)? (parameter_list)? 
-inheritance_list = ':' identifier (',' identifier)*
+structure_declaration = STRUCT identifier (SEMICOLON inheritance_list)? (parameter_list)? 
+inheritance_list = SEMICOLON identifier (COMMA identifier)* 
 
-identifier = letter (letter|digit|sign)* 
+expression = 
+	: conditional_expression 
+	| number 
+	| boolean 
+	| function_call 
+	| getter 
+	| structure_constructor 
+	| list 
+	| string 
+	| identifier
 
-expression = conditional_expression | literal_constant | function_call | getter | structure_constructor | list | string
+conditional_expression = IF function_call expression (ELSE expression)?
 
-conditional_expression = 'if' function_call expression ('else' expression)?
+list = OPEN_SQUARE_BR expression (COMMA expression)* CLOSE_SQUARE_BR
+  | OPEN_SQUARE_BR CLOSE_SQUARE_BR
 
-literal_constant = number | char | boolean
+function_call = identifier ( OPEN_ROUND_BR parameter_expression* CLOSE_ROUND_BR )?
+structure_constructor = identifier ( OPEN_ROUND_BR parameter_expression* CLOSE_ROUND_BR )? 
 
-string = '"' (line_string_content | line_string_expression)* '"'
-line_string_expression = '${' expression '}'  
-line_string_content = (literal_constant | sign)
+parameter_expression = (identifier EQUAL)? expression
 
-number = ('-')? digit+ ('.' digit+)?
-
-char = [a-zA-Z]
-digit = '0'..'9'
-sign = UNICODE_SYMBOL
-
-list = '[' expression (',' expression)* ']'
-  | '[' ']'
-
-function_call = identifier ( '(' parameter_expression* ')' )?
-structure_constructor = identifier ( '(' parameter_expression* ')' )? 
-
-parameter_expression = (identifier '=')? expression
-
-getter = identifier '[' (identifier | number) ']'
+getter = identifier OPEN_SQUARE_BR (identifier | number) CLOSE_SQUARE_BR
 
 type = 
 	: 'list'
@@ -50,9 +45,46 @@ type =
 	| structure_type
 	| 'number'
 	| 'string'
-	| 'char'
 	| 'bool'
 	| 'unit'
 
-functional_type = type '->' type
+identifier = letter (letter|digit|UNDERSCORE)*
+
+string = QUOTE (line_string_content | line_string_expression)* QUOTE
+line_string_expression = DOLLAR OPEN_CURLY_BR expression CLOSE_CURLY_BR  
+line_string_content = digit | char
+
+number = (MINUS)? digit+ (DOT digit+)?
+
+functional_type = type ARROW type
 structure_type = identifier
+
+char = [a-zA-Z]
+digit = '0'..'9'
+
+OPEN_ROUND_BR = '('
+CLOSE_ROUND_BR = ')'
+OPEN_SQUARE_BR = '['
+CLOSE_SQUARE_BR = ']'
+OPEN_CURLY_BR = '{'
+CLOSE_CURLY_BR = '}'
+
+ARROW = '->'
+
+IMPORT = 'import'
+FUN = 'fun'
+STRUCT = 'struct'
+
+IF = 'if'
+ELSE = 'else'
+
+EQUAL = '='
+
+COMMA = ','
+DOT = '.'
+SEMICOLON = ':'
+QUOTE = '"'
+MINUS = '-'
+
+DOLLAR = '$'
+UNDERSCORE = '_'
