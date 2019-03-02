@@ -1,21 +1,25 @@
 package lexer
 
-import recognizer.Recognizer
-import recognizer.RegexRecognizer
+import lexer.recognizer.Recognizer
+import lexer.recognizer.RegexRecognizer
+import kotlin.Boolean
+import kotlin.Char
+import kotlin.Pair
+import kotlin.String
 
 class Lexer(private val input: String) {
     private var currentParsePosition = 0
     private var currentParseLine = 0
     private var currentParseColumn = 0
 
-    private val recognizer: Recognizer = RegexRecognizer
+    private val recognizerFactory: Recognizer = RegexRecognizer
 
     fun allTokens(): List<Token> {
         var token = nextToken()
         val tokens = mutableListOf<Token>()
 
-        while (token.tokenType != TokenType.EndOfInput
-            && token.tokenType != TokenType.Other) {
+        while (token.type != TokenType.EndOfInput
+            && token.type != TokenType.Unrecognized) {
             tokens += token
             token = nextToken()
         }
@@ -26,7 +30,7 @@ class Lexer(private val input: String) {
     fun nextToken(): Token {
         skipWhiteSpacesAndNewLines()
         return if (currentParsePosition >= input.length)
-            Token(TokenType.EndOfInput, "", currentParseLine, currentParseColumn)
+            Token(TokenType.EndOfInput, currentParseLine, currentParseColumn)
         else recognizeLexem(input[currentParsePosition])
     }
 
@@ -43,158 +47,98 @@ class Lexer(private val input: String) {
         }
     }
 
-    fun recognizeLexem(char: Char) = when {
-        char.isLetter() -> recognizeIdentifier()
+    fun recognizeLexem(char: Char): Token = when {
+        char.isLetter() -> recognizeCharSequence()
+        char.isQuote() -> recognizeString()
         char.isDigit() -> recognizeNumber()
-        char.isComparison() -> recognizeComparisonOperator()
-        char.isArithmetic() -> recognizeArithmeticOperator()
-        char.isParenthesis() -> recognizeParenthesis()
-        else -> unknownToken()
+        char.isMinus() -> recognizeNumber()
+        char.isBrackets() -> recognizeBrackets()
+        else -> recognizeSpecialSymbols()
+    }
+
+    fun recognizeCharSequence(): Token =
+        recognizeKeyword() ?:
+        recognizeType() ?:
+        recognizeBoolean() ?:
+        recognizeIdentifier() ?:
+        unknownToken()
+
+    fun recognizeKeyword(): Token? = recognizeLanguageWord(
+        recognizerFactory.keyword(),
+        ::getKeywordType
+    )
+
+    fun recognizeType(): Token? = recognizeLanguageWord(
+        recognizerFactory.type(),
+        ::getStandartType
+    )
+
+    fun recognizeBoolean(): Token? = recognizeLanguageWord(
+        recognizerFactory.boolean(),
+        ::getBooleanType
+    )
+
+    fun recognizeIdentifier(): Token? = recognizeLanguageWord(
+        recognizerFactory.identifier(),
+        {TokenType.Identifier}
+    )
+
+    fun recognizeNumber(): Token = recognizeLanguageWord(
+        recognizerFactory.number(),
+        {TokenType.Number},
+        default = unknownToken()
+    )!!
+
+    fun recognizeString(): Token = recognizeLanguageWord(
+        recognizerFactory.string(),
+        {TokenType.StringType},
+        default = unknownToken()
+    )!!
+
+    fun recognizeLanguageWord(
+        recognizer: (String) -> Pair<Boolean, String>,
+        typeResolver: (String) -> TokenType,
+        default: Token? = null
+    ): Token? {
+        val (isKeyword, keyword) = recognizer(input)
+
+        if (!isKeyword) return default
+
+        val type = typeResolver(keyword)
+        return sequenceSymbolToken(type, keyword)
+    }
+
+    fun recognizeBrackets(): Token = with(input[currentParsePosition]) {
+        val type = getBracketType(this)
+        oneSymbolToken(type)
     }
 
 
-    fun recognizeIdentifier(): Token {
-        var identifier = ""
-        var position = currentParsePosition
-        val line = currentParseLine
-        val column = currentParseColumn
-
-        while (position < input.length) {
-            val character = input[position]
-
-            if (!(character.isLetterOrDigit() || character.isUnderscore()))
-                break
-
-            identifier += character
-            position++
+    fun recognizeSpecialSymbols(): Token =
+        if(input.startsWith(TokenType.Arrow.literal))
+            sequenceSymbolToken(TokenType.Arrow)
+        else with(input[currentParsePosition]) {
+            val tokenType = getSpecialSymbolType(this)
+            oneSymbolToken(tokenType)
         }
 
-        currentParsePosition += identifier.length
-        currentParseColumn += identifier.length
-
-        return Token(TokenType.Identifier, identifier, line, column)
-    }
-
-    fun recognizeComparisonOperator(): Token {
-        val position = currentParsePosition
-        val line = currentParseLine
+    fun oneSymbolToken(type: TokenType): Token {
         val column = currentParseColumn
-        val character = input[position]
-
-        val lookahead =
-            if(position + 1 < input.length) input[position + 1]
-            else null
-
-        val isLookaheadEqualSymbol = lookahead ?: lookahead == '='
-
         currentParsePosition++
         currentParseColumn++
-
-        if (isLookaheadEqualSymbol) {
-            currentParsePosition++
-            currentParseColumn++
-        }
-
-        return when(character) {
-            '>' -> if (isLookaheadEqualSymbol) Token(TokenType.GreaterThanOrEqual, ">=", line, column)
-                    else Token(TokenType.GreaterThan, ">", line, column)
-            '<' -> if (isLookaheadEqualSymbol) Token(TokenType.LessThanOrEqual, "<=", line, column)
-                    else Token(TokenType.LessThan, "<", line, column)
-            '=' -> if (isLookaheadEqualSymbol) Token(TokenType.Equal, "==", line, column)
-                    else Token(TokenType.Assign, "=", line, column)
-            else -> throw IllegalStateException("no comparison operator at " +
-                    "position $position column $column line $line")
-        }
+        return Token(type, currentParseLine, column)
     }
 
-    fun recognizeArithmeticOperator(): Token {
-        val position = currentParsePosition
-        val line = currentParseLine
+    fun sequenceSymbolToken(type: TokenType, value: String = type.literal): Token {
         val column = currentParseColumn
-        val character = input[position]
-
-        currentParsePosition++
-        currentParseColumn++
-
-        return when(character) {
-            '+' -> Token(TokenType.Plus, "+", line, column)
-            '-' -> Token(TokenType.Minus, "-", line, column)
-            '*' -> Token(TokenType.Times, "*", line, column)
-            '/' -> Token(TokenType.Div, "/", line, column)
-            else -> throw IllegalStateException("no comparison operator at " +
-                    "position $position column $column line $line")
-        }
-    }
-
-    fun recognizeParenthesis(): Token {
-        val position = currentParsePosition
-        val line = currentParseLine
-        val column = currentParseColumn
-        val character = input[position]
-
-        currentParsePosition++
-        currentParseColumn++
-
-        return if (character == '(')
-            Token(TokenType.LeftParenthesis, "(", line, column)
-        else Token(TokenType.RightParenthesis, ")", line, column)
-    }
-
-    fun recognizeNumber(): Token {
-        val line = currentParseLine
-        val column = currentParseColumn
-
-        val recognizer = recognizer.number()
-
-        val fsmInput = input.substring(currentParsePosition)
-
-        val (recognized, number) = recognizer(fsmInput)
-
-        if (recognized) {
-            currentParsePosition += number.length
-            currentParseColumn += number.length
-
-            return Token(TokenType.Number, number, line, column)
-        }
-
-        return unknownToken()
+        currentParsePosition += value.length
+        currentParseColumn += value.length
+        return Token(type, currentParseLine, column, value)
     }
 
     fun unknownToken(): Token = Token(
-        TokenType.Other,
-        "unknown",
+        TokenType.Unrecognized,
         currentParseLine,
         currentParseColumn
     )
-}
-
-data class Token(
-    val tokenType: TokenType,
-    val value: String,
-    val line: Int,
-    val column: Int) {
-    override fun toString() = value
-}
-
-fun Char.isWhitespaceOrNewLine() = isWhitespace() or isNewLine()
-
-fun Char.isNewLine() = this == '\n'
-
-fun Char.isUnderscore() = this == '_'
-
-fun Char.isOperator() = isComparison() or isArithmetic()
-
-fun Char.isComparison() = when(this) {
-    '>', '<', '=' -> true
-    else -> false
-}
-
-fun Char.isArithmetic() = when(this) {
-    '+', '-', '*', '/' -> true
-    else -> false
-}
-
-fun Char.isParenthesis() = when(this) {
-    '(', ')' -> true
-    else -> false
 }

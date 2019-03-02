@@ -8,9 +8,9 @@ import_statement = IMPORT identifier (DOT identifier)*
 
 top_level_declaration = (function_declaration | structure_declaration)
 
-function_declaration = FUN identifier parameter_list? SEMICOLON type (block | EQUAL expression)
+function_declaration = FUN identifier parameter_list? SEMICOLON type (block | ASSIGN expression)
 parameter_list = OPEN_ROUND_BR (function_parameter (COMMA function_parameter))? CLOSE_ROUND_BR 
-function_parameter = identifier SEMICOLON type (EQUAL expression)?
+function_parameter = identifier SEMICOLON type (ASSIGN expression)?
 block = OPEN_CURLY_BR expression* CLOSE_CURLY_BR
 
 structure_declaration = STRUCT identifier (SEMICOLON inheritance_list)? (parameter_list)? 
@@ -35,18 +35,26 @@ list = OPEN_SQUARE_BR expression (COMMA expression)* CLOSE_SQUARE_BR
 function_call = identifier ( OPEN_ROUND_BR parameter_expression* CLOSE_ROUND_BR )?
 structure_constructor = identifier ( OPEN_ROUND_BR parameter_expression* CLOSE_ROUND_BR )? 
 
-parameter_expression = (identifier EQUAL)? expression
+parameter_expression = (identifier ASSIGN)? expression
 
 getter = identifier OPEN_SQUARE_BR (identifier | number) CLOSE_SQUARE_BR
 
+functional_type = type ARROW type
+structure_type = identifier
+
+boolean = 'true' | 'false'
+
 type = 
-	: 'list'
+	: bracket_type
+	|'list'
 	| functional_type
 	| structure_type
 	| 'number'
 	| 'string'
 	| 'bool'
 	| 'unit'
+
+bracket_type = OPEN_ROUND_BRACKET type CLOSE_ROUND_BRACKET
 
 identifier = letter (letter|digit|UNDERSCORE)*
 
@@ -56,11 +64,9 @@ line_string_content = digit | char
 
 number = (MINUS)? digit+ (DOT digit+)?
 
-functional_type = type ARROW type
-structure_type = identifier
-
 char = [a-zA-Z]
 digit = '0'..'9'
+MINUS = '-'
 
 OPEN_ROUND_BR = '('
 CLOSE_ROUND_BR = ')'
@@ -78,13 +84,12 @@ STRUCT = 'struct'
 IF = 'if'
 ELSE = 'else'
 
-EQUAL = '='
+ASSIGN = '='
 
 COMMA = ','
 DOT = '.'
 SEMICOLON = ':'
 QUOTE = '"'
-MINUS = '-'
 
 DOLLAR = '$'
 UNDERSCORE = '_'

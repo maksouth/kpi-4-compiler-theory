@@ -2,7 +2,6 @@ package math_lexer
 
 import org.junit.Assert.*
 import org.junit.Test
-import recognizer.buildRegexNumberRecognizer
 
 class NumberFSMBuilderKtTest {
 
